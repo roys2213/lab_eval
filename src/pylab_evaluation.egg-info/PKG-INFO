@@ -1,0 +1,113 @@
+Metadata-Version: 2.1
+Name: pylab-evaluation
+Version: 0.0.1
+Summary: A package to evaluate python3 scripts submitted by students
+Author-email: Daniel Migault <mglt.biz@gmail.com>
+Project-URL: Homepage, https://github.com/mglt/pylab-evaluation
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+
+
+
+pylab_evaluation  evaluate python scripts submitted by student. 
+The use case is as follows: 
+Students have top complete a laboratory that includes python scripts. 
+Each students submits the scripts and a report using moodle. 
+
+This scripts takes the submission of the students and test automatically the scripts against those of the instructor. 
+The evaluation results in a grade being assigned to each student as well as a log file that can be helpful to the student for debuggging. 
+
+
+# Usage Example
+
+
+The code below is taken from the tests and shows how to use pylab_evaluation. 
+The example shows how to evaluate a laboratory named Baby ESP - which is an implementation of the IPsec/ESP protocol.
+
+The lab requires some scripts to be submitted by the students, and these scripts are submitted via moodle in our case. 
+
+Prerequisite for the Lab evaluation
+
+1. eval_lab_class: A class specific that describes the tests associated to the lab. You can find in the example directory lab_babyesp.py the class we are using for the Baby ESP lab. 
+This class follows some syntax you need to follow.
+2. eval_lab_class_dir: As the class is maybe not expected to become a module shared via a specific packet manager like pip, you need to define the directory where the eval_lab_class module is located. 
+3. instructor_dir: designates the location where the scripts of the instructor are located. 
+It matters that the functions implemented by the student can be compared with those provided by the instructor. 
+
+Configuration Project related parameters
+
+When multiple evaluations over a same lab / same class is performed, these parameters are not expected to change. 
+
+1. The lab is in itself a considered as a project which may be identified by the name of the lab and eventually the year. In our case we chose babyesp22.
+The will create a directory where every step of the processing is located.   
+
+2. student_db: Optionally, you may also extract the list of students. 
+In the moodle French interface from the "Participants" page, select all participants, then at the bottom page Pour "les utilisateurs sélectionnés…" select "Telecharger les donnees au format JSON". The output file is courseid_29228_participants.json. 
+Note that this is not mandatory and currently this only makes student being represented by their student id as opposed to the name of their directory.  
+However, we expect that such database will be used to send reports automatically to the student (by email for example).
+
+Configuration of the given evaluation
+
+An evaluation is performed in 3 steps:
+1. scripts are downloaded from moodle and evaluated. 
+From moodle one can manually download "all submission from the students".
+This file is designated as `moodle_archive.zip`. This results in 
+  * a) unzupping moodle submission into the `moodle` directory. 
+  * b) exporting the labs into the `lab` directory
+  * c) running the evaluation of the scripts and reporting the logs in `eval_dir` as well as the grades into `lab_grade_list.json`.
+2. grades may be completed, adjusted manually. In our case, this typically include the evaluation of the report in pdf that is performed manually.  
+This is currently performed by editing manually the `lab_grade_list.json`.
+3. grades are finalized and stored into the `lab_grade_list.json`.
+
+
+
+``
+basic_evaluation.py
+
+from pylab_evaluation import eval_class
+import sys
+sys.path.insert(0, '../examples' )
+import lab_babyesp
+
+## instantiate the student db: This is usefull to be able to
+## bind properly the lab to a student.
+## It would be good the log can be sent to the student (by email)
+student_db = eval_class.StudentDB( './test_class/courseid_29228_participants.json')
+
+## instantiate a lab_class evaluation
+eval_class = eval_class.EvalClass( \
+  ## the main directory with all information
+  './baby_esp22',
+  ## directory where the instructor's scripts are located
+  './test_single_lab/ref',\
+  ## The class that defines the lab
+  lab_babyesp.EvalBabyESP, \
+  ## directory where the module can be found - only usefull when
+  ## the class cannot be found by python
+  eval_lab_class_dir = '../examples',
+  ## student DB
+  student_db=student_db )
+
+## evaluates all python3 scripts
+eval_class.init_from_archive( './test_class/moodle_archive.zip' )
+## Eventually edit './baby_esp22/score_list.json' to manualy adjust the
+## grades or perform questions that are not related to the script evaluations
+## like evaluation of the report.
+
+eval_class.finalize( )
+```
+
+
+# Intsallation
+
+```
+$ git clone 
+$ cd pylab_evaluation
+$ python3 -m build && pip3 install --force-reinstall dist/pylab_evaluation-0.0.1.tar.gz
+python3 basic_evaluation.py
+```
+
+

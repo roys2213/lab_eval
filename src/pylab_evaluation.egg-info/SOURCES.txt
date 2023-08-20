@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/pylab_evaluation/__init__.py
+src/pylab_evaluation/eval_class.py
+src/pylab_evaluation/eval_lab.py
+src/pylab_evaluation.egg-info/PKG-INFO
+src/pylab_evaluation.egg-info/SOURCES.txt
+src/pylab_evaluation.egg-info/dependency_links.txt
+src/pylab_evaluation.egg-info/top_level.txt

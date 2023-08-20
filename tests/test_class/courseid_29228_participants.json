@@ -1,0 +1,16 @@
+[[{
+    "firstname": "firstname1",
+    "lastname": "lastname1",
+    "username": "xxx0501",
+    "email": "firstname1.lastname1@university.ca"
+},{
+    "firstname": "firstname2",
+    "lastname": "lastname2",
+    "username": "yyy2401",
+    "email": "firstname2.lastname2@university.ca"
+},{
+    "firstname": "firstname3",
+    "lastname": "lastname3",
+    "username": "zzz3104",
+    "email": "firstname3.lastname3@university.ca"
+}]]
