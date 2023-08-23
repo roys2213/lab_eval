@@ -84,6 +84,8 @@ class EvalLab:
       self.lab_id = lab_dir
       if isinstance( self.lab_id, str ):
         self.lab_id = self.lab_id.replace( '/', '.' )
+        if self.lab_id[ 0 ] == '.':
+          self.lab_id = self.lab_id[1:]
         for c in [ '{', '}', '(', ')', ' ', '[', ']', '!', '@',\
                    '#', '$', '%', '^', '&', '*' ]:
           self.lab_id = self.lab_id.replace( c , '' )
@@ -237,7 +239,7 @@ class EvalLab:
     can be executed and the credit associated to the question reported
     """
     if isinstance( self.score[ question_number ], ( int, float ) ) is False: 
-      print( f"\n### Evaluation of Question {question_number}###\n" )
+      print( f"\n### Evaluation of Question {question_number} ###\n" )
       try:
         with Timeout(5):
            score = self.eval_scheme[ question_number ]() 
@@ -245,6 +247,8 @@ class EvalLab:
         print( traceback.format_exc() )
         score = 0
       self.score[  question_number ] = score
+    else:
+      print( f"####  Question {question_number} skipped as already evaluated. If you would like the evaluation to be done again please remov ethe currnet score or the question. This has been implemeneted so automatically running the script does not eraise manual correction.\n")    
 
   def eval_py( self ):
     """ evaluates all lab scripts """
@@ -255,6 +259,7 @@ class EvalLab:
     print( f"\n\n ## Temporary score: ##" )
     print( self.score )
 
+### with the command line this function is not anymore useful
   def run_eval_py( self, eval_dir='./', module_dir=None ):
     """ write and run a script that performs eval_py 
  
@@ -269,6 +274,8 @@ class EvalLab:
       
     pyfile = join( eval_dir, f"{self.lab_id}_eval.py" )
     logfile = join( eval_dir, f"{self.lab_id}_eval.log" )
+    print( f"log_file : {logfile}" )
+    print( f"py_file : {pyfile}" )
 #    print( f"Evaluating {student_name} - {filename}" )
     ## because we import modules for each student and it is messy to 
     ## reload different version of the module, we generate a python file
@@ -279,6 +286,9 @@ class EvalLab:
         f.write(f"sys.path.insert( 0, '{module_dir}' )\n" )
       ## this is were we currenlty have the evaluation modules 
       ## should be removed at some point
+      ## ERROR: I think there is an error due to the conversion 
+      ## into string. When a value is set to None, this results
+      ## in it being executed as 'None'.
       f.write( f"import {self.__module__} \n\n" )
       f.write( f"lab = {self.__module__}.{self.__class__.__name__}( '{self.lab_dir}', '{self.ref_dir}', json_score_list='{self.json_score_list}', lab_id='{self.lab_id}' )\n" )
       f.write( "lab.eval_py() \n")
@@ -297,4 +307,157 @@ class EvalLab:
     except subprocess.TimeoutExpired:
       pass
 #    time.sleep( 2 )
+
+
+import argparse
+import configparser
+import pathlib
+import importlib
+import os
+import sys
+
+def cli():
+
+  description = \
+  """
+  Command line interface to evaluate a lab
+  
+  Example:
+  
+  The command below evaluates the script of a student located in the directory `student_dir`.
+  ```    
+  eval_single_lab  --conf ./pylab_evaluation/examples/lab_caesar.cfg  student_dir
+  ```
+
+  The command below renames the log file with that 
+  contains the evaluation:
+  ```
+  eval_single_lab  --conf ./pylab_evaluation/examples/lab_caesar.cfg  -lab_id student_name student_dir
+
+  ```
+  
+  The lab_caesar.cfg file provides the necessary informations:
+  
+  ```
+  [LabEvaluationClass]
+  ## This section contains the information related to the
+  ## class that evaluates the lab. These classes are 
+  ## specific to the lab and contains all the tests to 
+  ## evaluate the script of the student. 
+  ## Typicall classes include EvalCaesarLab in the lab_caesar
+  ## module or the EvalBabyESPLab in the lab_babyesp module. 
+  ## These classes are not expected to update the 
+  ## pylab_evaluation package. This makes possible to evaluate
+  ## a lab without requiring to updat ethe pylab_evaluation package. 
+  ## 
+  ## eval_class specifies the name of the class. This is 
+  ## typically EvalCaesarLab or EvalBabyESPLab. 
+  eval_class : EvalCaesarLab
+  ##
+  ## module specifies the name of the module that defines the class. This is typically lab_caesar or lab_babyesp
+  ##
+  module : lab_caesar
+  ##
+  ## module_dir specifies the directory that contains the module
+  module_dir : ./pylab_evaluation/examples
+  
+  [Instructor]
+  ## ref_dir designates the directory with the solutions. 
+  ## In general this is the directory where the instructor
+  ## has placed the solutions. The scripts provided by the 
+  ## student will be matched against the script contained 
+  ## in that directory. 
+  ref_dir : ./solutions/lab/py.instructor
+  ## 
+  ## json_score_list specifies the file that contains the scores resulting from the evaluation of the labs. This argument is optional. When it is not specified, scores are recoorded in the local directory in the file json_score_list.
+  json_score_list : ./json_score_list.json
+  ##
+  ## log_dir specifies th edirectory where the log file resulting from the evaluation of the scripts are stored. The log file are specific to each instance of the lab. This parameter is optional. It can also be specified in the command line (for example) when th edirectory is specific to the lab being evaluated. The evaluation only consider the value specied in thi sfile when it has not been specified in the command line. When th elog_dir is neither specified in the command line nor in this file, the logs are printed in the stout. 
+  log_dir : ./lab_log_dir
+  ```
+  
+  """
+  
+  
+  parser = argparse.ArgumentParser( description=description )
+  parser.add_argument( 'lab_dir',  type=pathlib.Path, nargs=1,\
+    help="directory where the students' scripts are located" )
+  parser.add_argument( '-lab_id', '--lab_id',  type=ascii, \
+    nargs='?', default=None, help="lab identifier (or student username)" )
+  parser.add_argument( '-conf', '--conf',  required=True, \
+    type=pathlib.Path, nargs=1,\
+    help="configuration file (mandatory)")
+  #parser.add_argument( '-eval_dir', '--eval_dir', \
+  parser.add_argument( '-log_dir', '--log_dir', \
+    type=pathlib.Path, nargs='?', default=None,\
+    help="directory that contains the log files.")
+  args = parser.parse_args()
+  
+  
+  config = configparser.ConfigParser()
+  config.read( args.conf )
+  
+  ## getting element that describe the class object to evaluate
+  ## the various instances of teh labs.
+  eval_class = config['LabEvaluationClass']['eval_class']
+  module = config['LabEvaluationClass']['module']
+  module_dir = os.path.abspath( os.path.expandvars( \
+                 config['LabEvaluationClass']['module_dir'] )) 
+  
+  ## setting the instructors's informations
+  ## set all path as absolute paths (from conf and args)
+  ref_dir = os.path.abspath( os.path.expandvars( \
+              config[ 'Instructor' ][ 'ref_dir' ] ) ) 
+  try: 
+    json_score_list = os.path.abspath( os.path.expandvars( \
+      config[ 'Instructor' ][ 'json_score_list' ] ) )
+  except KeyError:
+    json_score_list = 'json_score_list'
+  
+  ## the evaluation can be either specified by the cli or 
+  ## be configured for all tests  in conf, or not being 
+  ## specified in which cas eit is printed 
+  if args.log_dir is not None:
+    log_dir = os.path.abspath( os.path.expandvars( args.log_dir ) )
+  else:
+    try: 
+      log_dir = os.path.abspath( os.path.expandvars( \
+                  config[ 'Instructor' ][ 'log_dir' ] ) )   
+    except KeyError:
+      log_dir = None
+  
+  lab_dir = os.path.abspath( os.path.expandvars( \
+              args.lab_dir[ 0 ] ) )
+  
+  
+  ### import the class the represents the evaluation (from conf )
+  ## The following lines intend to instantiate the module
+  ## lab_caesar.EvalCaesarLab lab_babyesp.EvalBabyESP
+  ## The module_dir is added to the path so the python
+  ## interpreter can find the module
+  ## The designated class is instantiated from the module
+  sys.path.insert(0, os.path.abspath( module_dir ) )
+  specific_lab_module = importlib.import_module( module )
+  specific_lab_class = getattr( specific_lab_module, eval_class )
+  ## normalizing strings. type 'ascii' returns '<string_value>'
+  ## so we have to remove these ''
+  if args.lab_id is not None:
+    lab_id = args.lab_id[ 1:-1 ] 
+  else:
+    lab_id = None
+
+  lab = specific_lab_class( \
+    ## directory where the students' scripts are located
+    ## the parser returns a list of posixPath objects.
+    lab_dir=lab_dir, \
+    ## directory where the instructor's scripts are located 
+    ref_dir=ref_dir, \
+    ## file that centralizes (all students) evaluation 
+    json_score_list=json_score_list, \
+    ## lab identifier (or student username)
+    lab_id=lab_id )
+  if log_dir is not None:
+    sys.stdout = open( os.path.join( log_dir, f"{lab.lab_id}.log" ), 'wt')
+  lab.eval_py() 
+
 

@@ -19,6 +19,7 @@ from pylab_evaluation import eval_lab
 class EvalClass:
 
 #  def __init__( self, moodle_dir, evaluation_dir, instructor_dir ):
+#  def __init__( self, class_dir='./', instructor_dir=None, eval_lab_class=eval_lab.EvalLab, eval_lab_class_dir=None, student_db=None ):
   def __init__( self, class_dir='./', instructor_dir=None, eval_lab_class=eval_lab.EvalLab, eval_lab_class_dir=None, student_db=None ):
     """ evaluates the labs 
 
@@ -35,7 +36,7 @@ class EvalClass:
         +- student2-firstname_last_name_id
         +- student3-firstname_last_name_id
         +- student3-firstname_last_name_id
-      +- eval_dir
+      +- log_dir
         +- student1-firstname_last_name_id.log
     """
 
@@ -170,6 +171,8 @@ class EvalClass:
                           json_score_list=self.json_lab_grade_list, \
                           lab_id=self.lab_id_from_moodle_dir( dir_name ) )
       lab.run_eval_py( eval_dir=self.eval_dir, module_dir=self.eval_lab_class_dir )
+      cmd = "lab_eval --conf conf_file"
+      if 
 #    time.sleep( 2 ) # ensures the lad_grade_list file is updated
 
   def detect_same_files( self,  file_name_list=[] ):
@@ -369,5 +372,6 @@ class StudentDB:
     first_name.strip() 
     student = self.search( first_name=first_name, last_name=last_name )
     return student[ 'username' ]
+
 
 

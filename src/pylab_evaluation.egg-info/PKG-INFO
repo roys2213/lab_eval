@@ -1,13 +1,15 @@
 Metadata-Version: 2.1
 Name: pylab-evaluation
-Version: 0.0.1
-Summary: A package to evaluate python3 scripts submitted by students
-Author-email: Daniel Migault <mglt.biz@gmail.com>
-Project-URL: Homepage, https://github.com/mglt/pylab-evaluation
+Version: 0.0.2
+Summary: "A package to evaluate python3 scripts submitted by students"
+Home-page: https://github.com/mglt/pylab_evaluation
+Author: Daniel Migault
+Author-email: mglt.biz@gmail.com
+Project-URL: Bug Tracker, https://github.com/mglt/pylab_evaluation/issues
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.7
+Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 
 
