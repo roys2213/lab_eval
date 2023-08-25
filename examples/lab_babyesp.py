@@ -1,4 +1,4 @@
-from pylab_evaluation import eval_lab
+from lab_eval import eval_lab
 
 class EvalBabyESP( eval_lab.EvalLab ):
   def __init__( self, lab_dir, ref_dir, json_score_list=None, lab_id=None ):
