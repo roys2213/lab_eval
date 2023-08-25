@@ -12,6 +12,12 @@ import json
 import signal, time
 import subprocess
 import shlex
+import argparse
+import configparser
+import pathlib
+import importlib
+import os
+import sys
 
 class Timeout():
   """Timeout class using ALARM signal"""
@@ -130,26 +136,31 @@ class EvalLab:
 #    time.sleep( 2 )
 
 
-  def compute_total_score( self ):
+  def compute_grade( self ):
     """compute total score of the student (total and %) 
     """
     total_score = 0
-##    print( f"self.score: {self.score}" )
+    print( f"compute_grade: A self.score: {self.score}" )
     for k in list( self.score.keys() ):
-      ## if not a question number ( total grade for example )
-      if isinstance( k, int) is False:
+        ## only consider the question if:
+        ## 1) question is a number ( "total grade" for 
+        ##   example is not considered )
+        ## 2) the score is a number. When the question 
+        ## has not been evaluated it is often set to None
+      try:
+        int( k )
+        float( self.score[ k ] )
+        total_score += self.score[ k ]
+      except ( ValueError, TypeError ):
         continue
-      if self.score[ k ] is None:
-        continue
-      total_score += self.score[ k ]
 
     self.score[ "grade (total)" ] = total_score
-##    print( f"self.score: {self.score}" )
+    print( f"compute_grade: B: self.score: {self.score}" )
     max_score = 0
     for q_nbr in self.marking_scheme.keys():
-      if 'py' in self.marking_scheme[ q_nbr ] :
+      if 'py' in self.marking_scheme[ q_nbr ].keys() :
         max_score += self.marking_scheme[ q_nbr ][ 'py' ]
-      if 'pdf' in self.marking_scheme[ q_nbr ] :
+      if 'pdf' in self.marking_scheme[ q_nbr ].keys() :
         max_score += self.marking_scheme[ q_nbr ][ 'pdf' ]
 
     if max_score != 0:
@@ -254,7 +265,7 @@ class EvalLab:
     """ evaluates all lab scripts """
     for q_nbr in self.eval_scheme.keys() :
       self.eval_single_py( q_nbr )
-    self.compute_total_score(  )
+    self.compute_grade(  )
     self.record_score( )
     print( f"\n\n ## Temporary score: ##" )
     print( self.score )
@@ -309,12 +320,6 @@ class EvalLab:
 #    time.sleep( 2 )
 
 
-import argparse
-import configparser
-import pathlib
-import importlib
-import os
-import sys
 
 def cli():
 
@@ -391,6 +396,9 @@ def cli():
   parser.add_argument( '-log_dir', '--log_dir', \
     type=pathlib.Path, nargs='?', default=None,\
     help="directory that contains the log files.")
+  parser.add_argument( '-json_score_list', '--json_score_list', \
+    type=pathlib.Path, nargs='?', default=None,\
+    help="files that contains the scores")
   args = parser.parse_args()
   
   
@@ -408,11 +416,15 @@ def cli():
   ## set all path as absolute paths (from conf and args)
   ref_dir = os.path.abspath( os.path.expandvars( \
               config[ 'Instructor' ][ 'ref_dir' ] ) ) 
-  try: 
-    json_score_list = os.path.abspath( os.path.expandvars( \
-      config[ 'Instructor' ][ 'json_score_list' ] ) )
-  except KeyError:
-    json_score_list = 'json_score_list'
+  if args.json_score_list is not None:
+    json_score_list = os.path.abspath( os.path.expandvars(\
+      args.json_score_list ) )
+  else:
+    try: 
+      json_score_list = os.path.abspath( os.path.expandvars( \
+        config[ 'Instructor' ][ 'json_score_list' ] ) )
+    except KeyError:
+      json_score_list = 'score_list.json'
   
   ## the evaluation can be either specified by the cli or 
   ## be configured for all tests  in conf, or not being 

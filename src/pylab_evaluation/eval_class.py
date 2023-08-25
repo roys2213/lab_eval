@@ -5,6 +5,7 @@ import sys
 import json
 import pyunpack
 import shutil
+import pathlib
 from importlib import import_module, invalidate_caches, reload
 import traceback
 from cryptography.hazmat.primitives import hashes
@@ -14,78 +15,40 @@ import subprocess
 import binascii
 import math
 import time
+import datetime 
+import argparse
+import configparser
+import importlib
+
 from pylab_evaluation import eval_lab
 
-class EvalClass:
 
-#  def __init__( self, moodle_dir, evaluation_dir, instructor_dir ):
-#  def __init__( self, class_dir='./', instructor_dir=None, eval_lab_class=eval_lab.EvalLab, eval_lab_class_dir=None, student_db=None ):
-  def __init__( self, class_dir='./', instructor_dir=None, eval_lab_class=eval_lab.EvalLab, eval_lab_class_dir=None, student_db=None ):
-    """ evaluates the labs 
-
-    This class assumes the following structure:
-    project_dir:
-      +- grade_list.json 
-      +- moodle_dir
-          +- student1-firstname__last_name
-          +- student2-firstname__last_name
-          +- student3-firstname__last_name
-          +- student3-firstname__last_name
-      +- lab_dir
-        +- student1-firstname_last_name_id
-        +- student2-firstname_last_name_id
-        +- student3-firstname_last_name_id
-        +- student3-firstname_last_name_id
-      +- log_dir
-        +- student1-firstname_last_name_id.log
-    """
-
-    self.class_dir = abspath( class_dir )
-    self.json_lab_grade_list = join( self.class_dir, 'lab_grade_list.json' )
-    self.moodle_dir = join( self.class_dir, 'moodle' )
-    self.lab_dir = join( self.class_dir, 'lab' )
-    self.eval_dir = join( self.class_dir, 'eval_dir' )
-    self.instructor_dir = instructor_dir
-    if self.instructor_dir is not None:
-       self.instructor_dir = abspath( self.instructor_dir )
-    self.eval_lab_class = eval_lab_class
-    self.eval_lab_class_dir = eval_lab_class_dir
-    if self.eval_lab_class_dir is not None:
-      self.eval_lab_class_dir = abspath( self.eval_lab_class_dir )
-    self.student_db = student_db
-    
-
-  def create_dir( self, directory, force=False ):
-    """ remove existing dir and creates a clean directory """
-    if isdir( directory ) is False:
+def create_dir( directory, force=False ):
+  """ remove existing dir and creates a clean directory """
+  if isdir( directory ) is False:
+    os.makedirs( directory )
+  else: 
+    if len(os.listdir( directory ) ) != 0:
+      if force is False:
+        raise ValueError( f"{directory} already exists -> re-creating it. "\
+                          f"Please delete it. Note you can force the deletion "\
+                          f"by setting force to True." )
+      #raise ValueError( f" Testing {directory} already exists -> re-creating it."\
+      #                f"TBD: activate shutil.rmtree( {directory} )" )
+      shutil.rmtree( directory )
       os.makedirs( directory )
-    else: 
-      if len(os.listdir( directory ) ) != 0:
-        if force is False:
-          raise ValueError( f"{directory} already exists -> re-creating it. "\
-                            f"Please delete it. Note you can force the deletion "\
-                            f"by setting force to True." )
-        #raise ValueError( f" Testing {directory} already exists -> re-creating it."\
-        #                f"TBD: activate shutil.rmtree( {directory} )" )
-        shutil.rmtree( directory )
-        os.makedirs( directory )
 
-  def unzip_moodle( self, moodle_zip_file  ):
+
+class Moodle:
+
+  def extract( self, moodle_zip_file, moodle_dir  ):
     """ created the moodle directory with all students submissions """
     if isfile( moodle_zip_file  ) is False:
       raise ValueError( "Unable to find {moodle_zip_file}" )
-    self.create_dir( self.moodle_dir )
-    pyunpack.Archive( moodle_zip_file ).extractall( self.moodle_dir )
-
-  def lab_id_from_moodle_dir( self, dir_name ):
-    if self.student_db is None :
-      lab_id = dir_name
-    else:
-      lab_id = self.student_db.student_id_from_moodle_dir( dir_name )
-    return lab_id
-
-
-  def moodle_to_labs( self ):
+    create_dir( moodle_dir )
+    pyunpack.Archive( moodle_zip_file ).extractall( moodle_dir )
+    
+  def set_lab_dir( self, moodle_dir, lab_dir ):
     """ populates lab_dir from moodle_dir
 
     import considers the various ways a student can submit in moodle
@@ -101,19 +64,17 @@ class EvalClass:
     ##  the initial destination directory is empty.
     ## - 2) see if extract does not hav eth eappropriated feature.
     ## create_dir
-    self.create_dir( self.lab_dir )
+    create_dir( lab_dir )
     
-    for dir_name in os.listdir( self.moodle_dir ):
-      if isdir( join( self.moodle_dir, dir_name ) ) is False:
+    for dir_name in os.listdir( moodle_dir ):
+      if isdir( join( moodle_dir, dir_name ) ) is False:
         continue
       #creating the same directory in lab_dir
-      dst_dir = join( self.lab_dir, dir_name )
+      dst_dir = join( lab_dir, dir_name )
       os.makedirs( dst_dir )
-      src_moodle_dir = join( self.moodle_dir, dir_name )
+      src_moodle_dir = join( moodle_dir, dir_name )
       moodle_file_list = os.listdir( src_moodle_dir )
-      print( f"{src_moodle_dir} contains {moodle_file_list} " )
       if len( moodle_file_list ) == 1:
-#        if moodle_file_list[ 0 ] is zipfile:
         src_moodle = join( src_moodle_dir, moodle_file_list [ 0 ] )
         if isfile( src_moodle ) and ( '.gzip' in src_moodle or \
                                       '.zip' in src_moodle or \
@@ -129,8 +90,6 @@ class EvalClass:
           if len( dst_file_list ) == 1 and isdir( unzip_dir ):
             for file_name in os.listdir( unzip_dir ) :  
               shutil.move( join( unzip_dir, file_name ), join( dst_dir, file_name ) )
-            print( f"{unzip_dir}: shutil.rmtree( unzip_dir )" )
-#            shutil.rmtree( unzip_dir )
         elif isfile( src_moodle ) and ( '.py' in src_moodle or '.pdf' in src_moodle ):
           shutil.copy( src_moodle ,dst_dir )
         
@@ -146,38 +105,153 @@ class EvalClass:
             shutil.copy( join( src_moodle_dir, file_name ), 
                        join( dst_dir, file_name ) )
 
-  def eval_py( self, force=False):
-    if isfile( self.json_lab_grade_list ) is True:
+  def get_student( self, dir_name, student_db ):
+    """ provides a unique id associated to the student given a 
+        student directory assigned by moodle 
+    """
+    dir_name = dir_name.split( ',' )
+    last_name = dir_name[ 0 ].replace( '_', ' ' )
+    last_name = last_name.strip( )
+    reminder = dir_name[ 1 ][ 1 : ].split( '_' )[ : -3 ]
+    first_name = reminder[ 0 ]
+    if len( reminder ) > 1 :
+      for s in reminder [ 1 : ]:
+        first_name += f" {s}"
+    first_name.strip() 
+    return student_db.search( first_name=first_name, last_name=last_name )
+
+
+class StudentDB:
+   
+  def __init__( self, json_file_name ):
+    """ student DB can be extracted in a json format from moodle """
+    self.json_file_name = json_file_name
+    if isfile( json_file_name ):
+      with open( json_file_name, 'rt', encoding='utf8' ) as f:
+       ## the list of student  extracted by moodle is actually a list of list
+       ## [[ {student_1}, {student_2},... ]] so we take the the first element.
+        self.db = json.loads( f.read( ) )[ 0 ] 
+    else:
+      raise ValueError( f"""Cannot instantiate StudentDB json_file_name
+      {json_file_name} is not a file. """ )
+
+  def search( self, first_name=None, last_name=None ):
+    for student in self.db :
+      if student[ 'firstname' ] == first_name and student[ 'lastname' ] == last_name:
+        return student
+    raise ValueError( f"Student with firstname {first_name} and lastname"\
+                      f" {last_name} not found." )
+
+
+
+class EvalClass:
+
+  def __init__( self, lab_conf, class_dir, student_db=None, moodle=None ): 
+    """ evaluates the labs 
+
+    Args:
+      - lab_conf: the file path configuration file
+        to evaluate a single lab.
+      - class_dir: the directory associated to the class,
+        that is the directory where all students labs and 
+        evaluations are expected to be located.
+      - student_db: the database of the students. The data
+        base is mostly intended to correlate the submitted 
+        files to some student associated information. Currenlty 
+        we use that data base to name the logs with the 
+        student id. 
+
+    This class assumes the following structure:
+    +- class_dir
+      +- grade_list.json 
+      +- moodle_dir
+          +- student1-firstname__last_name
+          +- student2-firstname__last_name
+          +- student3-firstname__last_name
+          +- student3-firstname__last_name
+      +- lab_dir
+        +- student1-firstname_last_name_id
+        +- student2-firstname_last_name_id
+        +- student3-firstname_last_name_id
+        +- student3-firstname_last_name_id
+      +- log_dir
+        +- student1-firstname_last_name_id.log
+    """
+    
+    
+    self.lab_conf = os.path.abspath( os.path.expandvars( lab_conf ) )
+    self.class_dir = os.path.abspath( os.path.expandvars( class_dir ) )
+    config = configparser.ConfigParser()
+    config.read( self.lab_conf )
+    try:
+      self.json_score_list = os.path.abspath( os.path.expandvars(\
+        config[ 'Instructor' ][ 'json_score_list' ] ) )
+    except KeyError:
+      self.json_score_list = os.path.join( self.class_dir, 'score_list.json' )
+
+    self.lab_dir = join( self.class_dir, 'lab' )
+    try:
+      self.log_dir = os.path.abspath( os.path.expandvars(\
+        config[ 'Instructor' ][ 'log_dir' ] ) ) 
+    except KeyError:
+      self.log_dir = join( self.class_dir, 'log_dir' )
+    for directory in [ self.lab_dir, self.log_dir ]:
+      if isdir( directory ) is False:
+        os.makedirs( directory )
+    self.student_db = student_db
+    self.moodle = moodle
+
+  def get_lab_id( self, dir_name ):
+    """ returns the lab_id
+
+    The lab_id is derived from the directory associated to the student. 
+    In our case we use the student id as the lab_id when possible.
+    This requires that both self.moodle and self.student_db are provided. 
+
+    Args:
+      - dir_name: the directory associated to the student
+    
+    Returns:
+      - lab_id (str): the student username.
+    """
+    if self.student_db is None or self.moodle is None:
+      lab_id = dir_name
+    else:
+      student = self.moodle.get_student( dir_name, self.student_db )
+      lab_id = student[ 'username' ]
+    return lab_id
+
+
+
+
+  def eval_class( self, force=False ):
+    if isfile( self.json_score_list ) is True:
       if force is True :
-        raise ValueError( f"{self.json_lab_grade_list}: os.remove( self.json_lab_grade_list )" ) 
+        raise ValueError( f"{self.json_score_list}: os.remove( self.json_score_list )" ) 
       else:
         response = input( f"Grades have already been recorded in the file "\
-                          f"{self.json_lab_grade_list}.\n"\
+                          f"{self.json_score_list}.\n"\
                           f"To remove and re-run the evaluation type R.\n"\
                           f"Otherwise the evaluation will skip evaluation "\
                           f"aleary performed." )
         if response == 'R':
-          raise ValueError( f"{self.json_lab_grade_list}: os.remove( self.json_lab_grade_list )" ) 
-#          os.remove( self.json_lab_grade_list )
+          raise ValueError( f"{self.json_score_list}: os.remove( self.json_score_list )" ) 
 
     if isdir( self.lab_dir ) is False:
       raise ValueError( f"Cannot perform lab evaluation lab_dir "\
         f"{self.lab_dir} not found." )
     for dir_name in os.listdir( self.lab_dir ):
-      ## It seems that run_eval_py does not wait to be finished
-#      time.sleep( 7 )
-      lab = self.eval_lab_class( join( self.lab_dir, dir_name), \
-                          self.instructor_dir, \
-                          json_score_list=self.json_lab_grade_list, \
-                          lab_id=self.lab_id_from_moodle_dir( dir_name ) )
-      lab.run_eval_py( eval_dir=self.eval_dir, module_dir=self.eval_lab_class_dir )
-      cmd = "lab_eval --conf conf_file"
-      if 
-#    time.sleep( 2 ) # ensures the lad_grade_list file is updated
+      student_lab_dir = str( join( self.lab_dir, dir_name ) )
+      student_id = str( self.get_lab_id( dir_name ) )
+      print( f"Evaluating {student_lab_dir} for {student_id}" )
+      subprocess.run( [ "lab_eval_lab",  "--conf",  str( self.lab_conf ),\
+                        "--lab_id", student_id, "--log_dir", str( self.log_dir ),\
+                        "--json_score_list", str( self.json_score_list ), student_lab_dir ] )
 
   def detect_same_files( self,  file_name_list=[] ):
     """ reports identical files with same hash 
-    args:
+
+    Args:
       file_name_list: contains a list of files that should be looked at. 
       By default all files are considered whic may include input files 
       present in multiple if not all directories. Such files are not subject 
@@ -208,8 +282,6 @@ class EvalClass:
       print( "No collisions detected: all files seems different" )
     else:
       print( "Some collisions between files have been detected" )
-#      print( hash_dict )
-      ## json does not take bytes
       print_hash_dict = {}
       for k in hash_dict.keys() :
         print_hash_dict[ f"{binascii.hexlify( k, sep=' ' )}"  ] = hash_dict[ k ] 
@@ -217,89 +289,82 @@ class EvalClass:
         
 
 
-  def init_from_archive( self, moodle_zip_file ):
-     """ create and overwritte the project 
 
-     This is usually the step performed upon receiving scripts from the students.
-     This steps is usually followed by an manual correction of evaluation of the
-     grades - typically from a report. 
-     """
-     if isfile( moodle_zip_file ) is False:
-       raise ValueError( f"Unexpected {moodle_zip_file}\n Expecting file." )
+class ScoreList:
 
-     self.create_dir( self.class_dir, force=True )
-     for directory in [ self.class_dir, self.moodle_dir, \
-                        self.lab_dir, self.eval_dir ]:
-       if isdir( directory ) is False:
-         os.makedirs( directory )
-     self.unzip_moodle( moodle_zip_file )
-     self.moodle_to_labs( )
-     self.detect_same_files()
-     self.eval_py( self.eval_lab_class )
+  def __init__( self, json_score_list, eval_lab_obj=None ):
+    """ provides means to manipulate the json_score_list 
 
+    Args:
+      - json_score_list (path): designate sthe files that represents
+      the scores.
+      - eval_lab_obj: the instantiation of the specific Eval<lab_name>Lab
+      class. We need this class to update the grades as this class contains
+      the marking scheme.   
+    """
+    self.json_score_list = json_score_list
+    self.eval_lab_obj = eval_lab_obj
 
-  def load_grade_list( self) :
-    print( f"self.json_lab_grade_list: {self.json_lab_grade_list} ")
-    with open( self.json_lab_grade_list, 'r', encoding='utf8' ) as f:
+  def load_score_list( self) :
+    with open( self.json_score_list, 'r', encoding='utf8' ) as f:
       content = json.loads( f.read() )
-#    time.sleep( 2 )
     return content
 
-  def record_grade_list( self, grade_list ):
-    with open( self.json_lab_grade_list, 'w', encoding='utf8' ) as f:
+  def record_score_list( self, grade_list ):
+    with open( self.json_score_list, 'w', encoding='utf8' ) as f:
       f.write( json.dumps( grade_list, indent=2 ) )
-    time.sleep( 2 )
 
   def get_min_max_mean_grade( self ):
+    """ determines the min, max and mean total grades
 
-    grade_list = self.load_grade_list( )
+    Here "total grade" means the sum of the scores obtained
+    for each questions. In other words the total grade is an
+    addition of teh score and is not normalized. 
+    """
+    score_list = self.load_score_list( )
 
     max_grade = 0
     min_grade = 0
     mean_grade = 0
-    for lab_id in list( grade_list.keys() ):
-      grade = grade_list[ lab_id ] 
+    for lab_id in list( score_list.keys() ):
+      print( f"lab_id: {lab_id}" )
+      ## score = score_list[ lab_id ] 
       #lab = self.eval_lab_class( join( self.lab_dir, dir_name), \
-      lab = self.eval_lab_class( None, None, \
+      ## In order to provide a percentage or a grade, we need
+      ## the scoring scheme. This is the reason we initialize a 
+      ## lab
+      print( f"type( self.eval_lab_obj ) : {type( self.eval_lab_obj )}" )
+      self.eval_lab_obj.score = score_list[ lab_id ]         
+#      lab = self.eval_lab_class( None, None, \
 #                          self.instructor_dir, \
-                          json_score_list=self.json_lab_grade_list, \
-                          lab_id=lab_id )
-      lab.compute_total_score( )
-      grade_list[ lab_id ] = lab.score  
-      total_grade = grade[ "grade (total)" ]
+#                          json_score_list=self.json_score_list, \
+#                          lab_id=lab_id )
+#      lab.compute_grade( )
+      self.eval_lab_obj.compute_grade( )
+#      print( f" self.eval_lab_obj.compute_grade( ) : {self.eval_lab_obj.score }" )
+      score_list[ lab_id ] = self.eval_lab_obj.score  
+      total_grade = self.eval_lab_obj.score[ "grade (total)" ]
       max_grade = max( total_grade, max_grade ) 
       min_grade = min( total_grade, min_grade ) 
       mean_grade += total_grade
-    self.record_grade_list( grade_list )
-    mean_grade /= len( grade_list )
+    self.record_score_list( score_list )
+    mean_grade /= len( score_list )
     return min_grade, max_grade, mean_grade
 
 
 
   def finalize( self, h_mean=3.2/5*100, h_std=1 ):
-    """Finalizes the grades and provides an estimation so grades have the
+    """Finalizes the scores and provides an estimation so grades have the
        specified mean value.
     
     """
     min_grade, max_grade, mean_grade = self.get_min_max_mean_grade()
-    print( f"min: {min_grade}, max: {max_grade}, mean: {mean_grade}" )
-#    with open( self.json_lab_grade_list, 'r', encoding='utf8' ) as f:
-#      score_list = json.loads( f.read() )
-    grade_list = self.load_grade_list( )
-#    elab = eval_lab.EvalLab( )
+    grade_list = self.load_score_list( )
     std = 0
     std_perc = 0
     mean_grade_perc = 0
     for lab_id in list( grade_list.keys() ):
       grade = grade_list[ lab_id ] 
-      #lab = self.eval_lab_class( join( self.lab_dir, dir_name), \
-#      lab = self.eval_lab_class( None, None, \
-##                          self.instructor_dir, \
-#                          json_score_list=self.json_lab_grade_list, \
-#                          lab_id=lab_id )
-#      lab.compute_total_score( )
-#      print( f"score: {score}" )
-#      score_list[ lab_id ] = lab.score  
       if "grade (%)" not in list( grade.keys() ):
         grade[ "grade (%)" ] = grade[ "grade (total)" ] / max_grade * 100.0
       mean_grade_perc += grade[ "grade (%)" ]
@@ -323,7 +388,7 @@ class EvalClass:
         grade[ "h grade (total)" ] = h_std / std * ( grade[ "grade (total)" ] - mean_grade ) + h_mean
         grade[ "h grade (%)" ] = h_std / std * ( grade[ "grade (%)" ] - mean_grade_perc ) + h_mean
         grade_list[ lab_id ] = grade
-    self.record_grade_list( grade_list )
+    self.record_score_list( grade_list )
 
   ## It would be good to define some functions to return:
   ## - the grades in an excel sheet (the specific format may be defined
@@ -335,43 +400,182 @@ class EvalClass:
   def xls( self, student_list:list=[] ):
     pass
 
-  def notify_students( self, ):
-    pass  
+  def notify_students( self, student_db, project_name=""):
+    """lists the students for which an evaluation has been performed
 
-class StudentDB:
-   
-  def __init__( self, json_file_name ):
-    """ student DB can be extracted in a json format from moodle """
-    self.json_file_name = json_file_name
-    if isfile( json_file_name ):
-      with open( json_file_name, 'rt', encoding='utf8' ) as f:
-       ## the list of student  extracted by moodle is actually a list of list
-       ## [[ {student_1}, {student_2},... ]] so we take the the first element.
-        self.db = json.loads( f.read( ) )[ 0 ] 
-#        print( f"student_db: {self.db}" ) 
- 
-  def search( self, first_name=None, last_name=None ):
-    for student in self.db :
-      if student[ 'firstname' ] == first_name and student[ 'lastname' ] == last_name:
-        return student
-    raise ValueError( f"Student with firstname {first_name} and lastname"\
-                      f" {last_name} not found." )
-
-  def student_id_from_moodle_dir( self, dir_name ):
-    """ provides a unique id associated to the student given a 
-        student directory assigned by moodle 
+    The evaluation is performed remotely, and results are sent to the
+    students. This function collects the emails and prepares the mail
+    to be sent. In the future, it would be good the email is sent 
+    automatically.   
     """
-    dir_name = dir_name.split( ',' )
-    last_name = dir_name[ 0 ].replace( '_', ' ' )
-    last_name = last_name.strip( )
-    reminder = dir_name[ 1 ][ 1 : ].split( '_' )[ : -4 ]
-    first_name = reminder[ 0 ]
-    if len( reminder ) > 1 :
-      for s in reminder [ 1 : ]:
-        first_name += f" {s}"
-    first_name.strip() 
-    student = self.search( first_name=first_name, last_name=last_name )
-    return student[ 'username' ]
+    score_list = self.load_score_list( )
+    student_list = []
+    for student in student_db.db:
+      if student[ 'username' ] in score_list.keys():
+        student_list.append( student )
+    if len( student_list ) != len( score_list.keys() ):
+      raise ValueError( f"non matching length student_list \
+              {student_list} and score_list_keys {score_list.keys()}" )
+    
+    email_list = ""
+    for student in student_list:
+      email_list += f"{student[ 'email' ]}; "
+    print( f"evaluated students: {email_list}" )
+    
+    print( f"""
+    {project_name} scripts {datetime.datetime.now()} 
+    
+    Bonjour,
+    
+    Veuillez trouver ci-joint les résultats des scripts soumis.
+    
+    Nous rappelons que les soumissions sont individuelles.
+    
+    Cordialement
+    Daniel
+    """)
+
+def lab_eval_class():
+
+  description = \
+  """ create and overwritte the project 
+
+  This is usually the step performed upon receiving scripts from the students.
+  This steps is usually followed by an manual correction of evaluation of the
+  grades - typically from a report. 
+  """
 
 
+  parser = argparse.ArgumentParser( description=description )
+  parser.add_argument( 'moodle_zip_file',  type=pathlib.Path, nargs=1,\
+    help="correpsonds to the archive that contains all labs from\
+         students. (mandatory)" )
+  parser.add_argument( '-conf', '--conf',  required=True, \
+    type=pathlib.Path, nargs=1,\
+    help="configuration file (mandatory)")
+  parser.add_argument( '-student_db', '--student_db', \
+    type=pathlib.Path, nargs='?', default=None,
+    help="file of the student data base (optional). This \
+          argument overwrite the one specified in the conf file,\
+          if specified in the configuration file. When student_db \
+          is neither specified in the configuration file or in \
+          the command line. It is set by default to None.")
+  parser.add_argument( '-class_dir', '--class_dir',  default='./class_dir', \
+    type=pathlib.Path, nargs=1,\
+    help="directory with all files and evaluation file (mandatory)")
+  args = parser.parse_args()
 
+  ## initializing moodle_zip_file
+  moodle_zip_file =  os.path.abspath( os.path.expandvars( \
+              args.moodle_zip_file[ 0 ] ) )
+  
+  ## intializing the confile
+  conf =  os.path.abspath( os.path.expandvars(  args.conf[ 0 ] ) )
+  config = configparser.ConfigParser()
+  config.read( conf )
+
+  ## initializinf student_db
+  if args.student_db is not None:
+    json_student_db = os.path.abspath( os.path.expandvars( args.student_db ) )
+    student_db_src = "CLI"
+  else:
+    try:
+      print( f"student_db: from config file: {config[ 'ClassEvaluation' ][ 'student_db' ]}" )
+      json_student_db = os.path.abspath( os.path.expandvars( \
+                  config[ 'ClassEvaluation' ][ 'student_db' ] ) )
+      print( f"student_db: after expansion {json_student_db}" )
+      student_db_src = "conf file"
+    except KeyError:
+      json_student_db = None
+      student_db_src = "not provided"
+  if json_student_db is not None:
+    print( json_student_db  )
+    student_db = StudentDB( json_student_db )
+    print( student_db.db )
+  else:
+    student_db = None  
+  ## intialization of class_dir
+  class_dir = os.path.abspath( os.path.expandvars( args.class_dir[ 0 ] ) ) 
+
+   
+  if isfile( moodle_zip_file ) is False:
+    raise ValueError( f"Unexpected {moodle_zip_file}\n Expecting file." )
+  moodle_dir = os.path.join( class_dir, 'moodle_dir' )
+  create_dir( class_dir, force=True )
+
+  print( f""" 
+  - moodle_zip_file: containing the labs submitted by
+    the students: {moodle_zip_file}
+  - conf: configuration file for lab evaluation and 
+    class evaluation ({student_db_src}): {json_student_db}
+  - class_dir: directory that will contain labs, and
+    associated logs: {class_dir}.""")
+
+  moodle = Moodle( )
+  moodle.extract( moodle_zip_file, moodle_dir )
+  eval_class = EvalClass ( conf, class_dir, student_db=student_db, moodle=moodle )
+  print( f"""
+  - log_dir: conatins the resulting evaluations of the labs.
+    {eval_class.log_dir}. If that value is not expected.
+    You can do the following:
+    * 1) consider the default value 'log_dir', and comment 
+      the corresponding value in the conf file. 
+    * 2) configure the conf file with the expected value.
+  - json_score_list: designates the file that contains the scores:
+    {eval_class.json_score_list}. If that is not the expected 
+    value please see log_dir comment to find out how to proceed.""")
+
+  moodle.set_lab_dir( moodle_dir, eval_class.lab_dir )
+  eval_class.detect_same_files()
+  eval_class.eval_class( )
+  ## preparing the email to send
+  score_list = ScoreList( eval_class.json_score_list )
+  project_name = os.path.dirname( class_dir )
+  score_list.notify_students( student_db, project_name=project_name)
+
+   
+def lab_finalize_grades( ):
+  description = """ computes grades 
+
+  This includes total as well as compute harmonized grades.
+  This is especially usefull when some questions have been 
+  evaluated manually or when the scores need to be harmonized.
+
+  """
+  parser = argparse.ArgumentParser( description=description )
+  parser.add_argument( '-conf', '--conf',  required=True, \
+    type=pathlib.Path, nargs=1,\
+    help="configuration file (mandatory)")
+  parser.add_argument( 'json_score_list',  type=pathlib.Path, nargs=1,\
+    help="specifies the score list file (mandatory)" )
+  args = parser.parse_args()
+
+  json_score_list = os.path.abspath( os.path.expandvars( args.json_score_list[ 0 ] ) ) 
+
+  config = configparser.ConfigParser()
+  config.read( os.path.abspath( os.path.expandvars(  args.conf[ 0 ] ) ) )
+
+  ## getting element that describe the class object to evaluate
+  ## the various instances of the labs.
+  ## we need this class to compute the grades 
+  eval_class = config['LabEvaluationClass']['eval_class']
+  module = config['LabEvaluationClass']['module']
+  module_dir = os.path.abspath( os.path.expandvars( \
+                 config['LabEvaluationClass']['module_dir'] ))
+  ### import the class the represents the evaluation (from conf )
+  ## The following lines intend to instantiate the module
+  ## lab_caesar.EvalCaesarLab lab_babyesp.EvalBabyESP
+  ## The module_dir is added to the path so the python
+  ## interpreter can find the module
+  ## The designated class is instantiated from the module
+  sys.path.insert(0, os.path.abspath( module_dir ) )
+  specific_lab_module = importlib.import_module( module )
+  specific_lab_class = getattr( specific_lab_module, eval_class )
+
+  score_list = ScoreList( json_score_list, specific_lab_class() )
+  score_list.finalize( )
+
+if __name__ == "__main__":
+
+#  lab_eval_class() 
+  lab_finalize_grades()    

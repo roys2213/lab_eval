@@ -5,7 +5,7 @@ import sys
 
 class EvalCaesarLab( eval_lab.EvalLab ):
 
-  def __init__( self, lab_dir, ref_dir, json_score_list=None, lab_id=None ):
+  def __init__( self, lab_dir=None, ref_dir=None, json_score_list=None, lab_id=None ):
     """ Evaluates the Crypto Lab
 
     Args:
@@ -19,6 +19,11 @@ class EvalCaesarLab( eval_lab.EvalLab ):
         student name. When that argument is not provided, the 
         directory is used. to identify the lab.  
 
+    Note: It is important to have the lab_dir and ref_dir to 
+    be instantiated with a default value None. This makes it
+    possible to instantiates the class without any argument.
+    We need to do so when we evaluate the grades from the 
+    scores as the grades are computed from the marking scheme.  
     """
     # questiuon number { 'pdf' : points associated to the report,
     #                    'py' : points associated to code }
