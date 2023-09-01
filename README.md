@@ -37,17 +37,25 @@ lab_eval_lab  --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg --lab_id toto ./l
 ```
 ## Evaluation the class 
 
-To run the evaluation from the moodle file.
+The configuration file is located in ~/gitlab/lab_eval/examples/lab_caesar.cfg and specifies the various locations of the necessary files:
+
+* the instructir's python files (the solutions)
+* the file that evaluates the student's scripts against the solutions lab_caesar.py
+* the student database. The student data base is provided by moodle in "Participants" tab, "select all participants" export as JSON file.
+* the labs submitted by the students "Consulted assignments" > "Download all assignments" - in our case  INF808-AI-Laboratoire1\ Attaques\ cryptographiques\ \(Remise\ des\ devoirs\)-2622297.zip
+
+
+To run the evaluation from the moodle file
 
 
 ```
-lab_eval_class  --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg  --class_dir test_class_dir   INF808-AG-Lab1\ attaques\ cryptographiques\ \(remise\ des\ travaux\)-2251466.zip
+lab_eval_class  --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg  --class_dir lab1   INF808-AI-Laboratoire1\ Attaques\ cryptographiques\ \(Remise\ des\ devoirs\)-2622297.zip 
 ```
 
 In general, we expect that some question are evaluated manually. This can occurs when the lab combines code evaluation as well as a report evaluation. Once the report has been evaluated and the associated scores placed into the `score_list.json` file, we recompute the grades to consider the manually added scores as follows:
 
 ```
-lab_finalize_grades  --conf /home/mglt/gitlab/lab_eval/examples/lab_caesar.cfg test_class_dir/score_list.json
+lab_finalize_grades  --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg test_class_dir/score_list.json
 
 ```
 
