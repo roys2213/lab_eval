@@ -28,7 +28,7 @@ class EvalCaesarLab( eval_lab.EvalLab ):
     # questiuon number { 'pdf' : points associated to the report,
     #                    'py' : points associated to code }
     self.marking_scheme = {   1 :  {             'pdf' : 2 },
-                              2 :  { 'py' : 3              },
+                              2 :  { 'py' : 4              },
                               3 :  { 'py' : 2              },
                               4 :  {             'pdf' : 4 },
                               5 :  { 'py' : 2.5, 'pdf' : 1 },
@@ -37,7 +37,7 @@ class EvalCaesarLab( eval_lab.EvalLab ):
                               8 :  { 'py' : 4              },
                               9 :  { 'py' : 4              },
                               10 : {             'pdf' : 2 },
-                              11 : { 'py' : 4              },
+                              11 : { 'py' : 6              },
                               12 : {             'pdf' : 2 }, 
                               13 : {             'pdf' : 2 }}
     
@@ -127,7 +127,12 @@ class EvalCaesarLab( eval_lab.EvalLab ):
     clear_text = "Tous les êtres humains naissent libres et égaux en dignité et en droits. Ils sont doués de raison et de conscience et doivent agir les uns envers les autres dans un esprit de fraternité."
     score+= self.compare( caesar.decrypt(clear_text, key), \
                           caesar_solution.decrypt( clear_text, key ), 2 / 7 )
-
+#    print( "--- Bonus Debug ---" )
+#    print( "Decrypt Result:")
+#    print( caesar.decrypt(clear_text, key ) )
+#    print( "\nExpected Result: " )
+#    print( caesar_solution.decrypt( clear_text, key ) )
+#    print( "---" )
 ##    print( f"\nh) Testing word encryption( decryption )" )
 ##    This does not work because of the upper letters are converted 
 ##    to lower as well as bevause special characters are not considered.

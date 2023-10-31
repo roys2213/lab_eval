@@ -58,6 +58,67 @@ In general, we expect that some question are evaluated manually. This can occurs
 lab_finalize_grades  --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg test_class_dir/score_list.json
 
 ```
+## Adding to score_files
+
+The evaluation of the class evaluates the python scripts and generates a file `score_list.json` file. In our case, in addition to the python scripts we are willing to evaluate the report of the lab - which is a PDF file. 
+One way to do, is to edit the `score_list.json` file directly and add the grade associated to the report. 
+Another way to proceed is to evaluate the PDF report in a separate score_list file `pdf_score_list.json`, and then combine the two files together. To do so we proceed as follows:
+
+```
+lab_add_score_list --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg score_list.json pdf_score_list.json 
+```
+
+## Generating the grades
+
+
+```
+lab_finalize_grades --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg score_list.json 
+```
+
+## Exporting in xls
+
+To fill the scores to the University, one needs to complete a xls sheet. 
+The following function extracts the list of students id in a column. Then the corresponding grades are generated before being included again back in the original xls sheet. 
+
+
+```
+lab_export_xls --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg   --sheet_name lab1 score_list.json  notes-INF808Gr18-A2023.xlsx 
+
+```
+There is still a need to manually copy paste the clumns of the grade_lab1.xls file. The reason is that we have not been able to complete the xls file. Further improvement may consider adding a sheet to the original file or using the concatenating of the dataframes. 
+
+
+# Real Example
+
+## lab_caesar
+
+We download the scripts from moodle and run the evaluation. 
+
+```
+lab_eval_class  --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg  --class_dir lab1   INF808-AI-Laboratoire1\ Attaques\ cryptographiques\ \(Remise\ des\ devoirs\)-2622297.zip
+```
+
+This creates a directory lab1 in which we can find the resulting evaluation `score_list.json`. However, we received some scripts via email. We currently cannot re-run the evaluation and the existing expanded zip file. The main reason is that if we enable this, it remains confusing what is re-evaluated, what is overwritten. As aresult, we need to build a new zip file. 
+To do so, we place the up-todate scripts in the `lab1/lab` directory under the right student, selecte all student directories and compress them in zip file `moodle.zip` and re-run the evaluation.
+```
+lab_eval_class  --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg  --class_dir lab1 moodle.zip 
+```
+
+The lab_caesar combines the evaluation of the scripts and a report. As a result, we have the evaluation of the report performed in `pdf_score_list.json` and the evaluation of the scripts in `lab1/score_list.json`. To combine these two score_list we add those of the report to those of the scripts with the following command line.
+Note the added file is the second argument so `pdf_score_list.json`` will be added to `lab/score_list.json`.
+
+```
+lab_add_score_list --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg lab1/score_list.json pdf_score_list.json
+```
+When original files have been saved, we can check `pdf_score_list.json` has not been modified while `lab1/score_list.json` has been modified. 
+
+We need then to generate the xls files that are considered as input to their system Genote. They provide an xls file to be complete. The column that contains the student id is located at row 17 column 0. The following function takes that column and generates the corresponding grades in a file `lab1_grades.xls`. We need then to manually copy/paste the grades to the main file before submitting. 
+In our case, we have two groups so we run the following commands:
+
+```
+lab_export_xls --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg --student_id_row 17 --student_id_col 0  --sheet_name lab1_18 lab1/score_list.json  notes-INF808Gr18-A2023.xlsx
+lab_export_xls --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg --student_id_row 17 --student_id_col 0  --sheet_name lab1_19 lab1/score_list.json  notes-INF808Gr19-A2023.xlsx
+```
 
 # Configuration 
 
@@ -74,6 +135,12 @@ Check the `lab_eval.git/examples/lab_caesar.cfg` as an example.
 please check `lab_eval.git/examples/lab_caesar.cfg` or `lab_eval.git/examples/lab_babyesp.cfg`
 
 
+# Other links:
+
+Here are some additional resources to push further the automation of Moodle labs assignaments:
+
+https://github.com/troeger/moodleteacher
+https://github.com/hexatester/moodlepy/blob/master/moodle/mod/assign/assignment.py
 
 
 
