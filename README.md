@@ -11,13 +11,9 @@ The evaluation results in a grade being assigned to each student as well as a lo
 # Installation
 
 ```
-pip install eval_lab
-```
-
-```
 $ git clone 
 $ cd lab_eval
-$ python3 -m build && pip3 install --force-reinstall dist/pylab_eval-0.0.2.tar.gz
+$ python3 -m build && pip3 install --force-reinstall dist/pylab_eval-0.0.<version>.tar.gz
 ```
 
 # Usage Example
