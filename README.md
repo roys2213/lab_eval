@@ -116,6 +116,29 @@ lab_export_xls --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg --student_id_row
 lab_export_xls --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg --student_id_row 17 --student_id_col 0  --sheet_name lab1_19 lab1/score_list.json  notes-INF808Gr19-A2023.xlsx
 ```
 
+## Intra
+
+In this case, the intra is exclusively performed in moodle and we export the results in a json format. That file does not match exactly the format we are using for 'score_list.json'. We could have used the xls format. However, we encoutered a few difficulties described as follows:
+
+* Numbers are using a "2,3" format instead of "2.3" which makes math operations such as addition difficult. In our case, we want to update some questions for exemple that had an error. 
+* We have all students in one file, while we need to import the results per sub groups. 
+
+To convert the json file exported from moodle, we use the following command:
+
+```
+lab_moodle_to_score_list INF808-AI-Intra-notes.json 
+```
+
+The resulting file is 'score_list.json'
+
+We eventually perform some operations. 
+
+```
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_18 score_list.json  notes-INF808Gr18-A2023.xlsx
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_19 score_list.json  notes-INF808Gr19-A2023.xlsx
+```
+
+
 # Configuration 
 
 ## Configuration file

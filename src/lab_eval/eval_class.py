@@ -312,6 +312,52 @@ class ScoreList:
     """
     self.json_score_list = json_score_list
     self.eval_lab_obj = eval_lab_obj
+    if eval_lab_obj is None :
+      self.eval_lab_obj = eval_lab.EvalLab( json_score_list=json_score_list )
+
+  def init_from_moodle_json( self, moodle_json_path, \
+#                  json_score_list_path='./json_score_list.json',
+                      max_total_score=None ):
+  
+    """ initializes score_list from a moodle score list format
+
+    When a test is performed on moddle, we can export the results in a json file, 
+    but this resulting file does not have the format of the score_list. 
+    This function initiates a ScoreList object.
+
+    Args:
+      moodle_json_path (str): the path of the moodle json file
+      json_score_list_path (str): the file of the output json_score_list_path.
+        By default, the output file is './json_score_list.json'.
+      max_total_score (int): the maximum score. Thisis usefull to derive 
+        the grade as as percentage. By default the highest score is considered.  
+    """
+
+    json_score_list = {}
+
+    with open( moodle_json_path, 'rt', encoding='utf8' ) as f:
+      moodle_list = json.loads( f.read( ) )[ 0 ]
+     
+    for moodle_student in moodle_list:
+      question_dict = {}
+      question_index = 1
+      for k in moodle_student.keys() :
+        if k[0] == 'q':
+          ## moodle by default writtes numbers like "2,3" instead of "2.3"
+          ### we ensure the format is appropriated
+          ## In some cases the value is also "-" which is replaced by 0
+# print( f"moodle_student: {moodle_student}" )
+          v = moodle_student[ k ]
+          if v == '-':
+            v = 0
+          else:
+            v = v.replace( ',', '.' )
+          question_dict[ question_index ] = float( v )
+          question_index += 1
+      json_score_list[ moodle_student[ 'nomdutilisateur' ] ] = question_dict
+
+    self.record_score_list( json_score_list  )
+    self.finalize( max_total_score=max_total_score )
 
   def init_from_file( json_score_list_path, conf_path=None ):
     """ initialize Scorelist from conf and json file_name
@@ -396,7 +442,7 @@ class ScoreList:
     
     
 
-  def get_min_max_mean_grade( self ):
+  def get_min_max_mean_grade( self, max_total_score=None ):
     """ determines the min, max and mean total grades
 
     Here "total grade" means the sum of the scores obtained
@@ -409,7 +455,7 @@ class ScoreList:
     min_grade = 0
     mean_grade = 0
     for lab_id in list( score_list.keys() ):
-#      print( f"lab_id: {lab_id}" )
+      print( f"lab_id: {lab_id}" )
       ## score = score_list[ lab_id ] 
       #lab = self.eval_lab_class( join( self.lab_dir, dir_name), \
       ## In order to provide a percentage or a grade, we need
@@ -422,7 +468,7 @@ class ScoreList:
 #                          json_score_list=self.json_score_list, \
 #                          lab_id=lab_id )
 #      lab.compute_grade( )
-      self.eval_lab_obj.compute_grade( )
+      self.eval_lab_obj.compute_grade( max_total_score=max_total_score )
 #      print( f" self.eval_lab_obj.compute_grade( ) : {self.eval_lab_obj.score }" )
       score_list[ lab_id ] = self.eval_lab_obj.score  
       total_grade = self.eval_lab_obj.score[ "grade (total)" ]
@@ -435,12 +481,14 @@ class ScoreList:
 
 
 
-  def finalize( self, h_mean=3.2/5*100, h_std=1 ):
+  def finalize( self, h_mean=3.2/5*100, h_std=1, max_total_score=None ):
     """Finalizes the scores and provides an estimation so grades have the
        specified mean value.
-    
+
+    Args:
+      max_total_score (int): indicates the maximum possible score. This is usefull to compute the grade in %. The value is considered by eval_lab.EvalLab.compute_score(). We need to define this value as the eval_lab class does not have the grade_scheme being set.  In the future, we should probably hav ethis variable in the instantiation of the class or as as function.   
     """
-    min_grade, max_grade, mean_grade = self.get_min_max_mean_grade()
+    min_grade, max_grade, mean_grade = self.get_min_max_mean_grade( max_total_score=max_total_score )
     print( f"min: {min_grade}" )
     print( f"max: {max_grade}" )
     print( f"mean: {mean_grade}" )
@@ -450,8 +498,14 @@ class ScoreList:
     mean_grade_perc = 0
     for lab_id in list( grade_list.keys() ):
       grade = grade_list[ lab_id ] 
-      if "grade (%)" not in list( grade.keys() ):
+      ## When grade (%) has already been computed, we do not re-compute it.
+      ## The reason is that for labs, for example, it should be computed 
+      ## by the lab_eval class.
+      ## When the eval_lab class is not able to compute the grade individually,
+      ## then we do it by considering all resulting scores. 
+      if "grade (%)" not in list( grade.keys() ) :
         grade[ "grade (%)" ] = grade[ "grade (total)" ] / max_grade * 100.0
+
       mean_grade_perc += grade[ "grade (%)" ]
       std += grade[ "grade (total)" ] ** 2
       std_perc += grade[ "grade (%)" ] ** 2
@@ -772,8 +826,8 @@ def lab_export_xls():
   This is usually useful to import the grades to the system.
   """
   parser = argparse.ArgumentParser( description=description )
-  parser.add_argument( '-conf', '--conf',  required=True, \
-    type=pathlib.Path, nargs=1,\
+  parser.add_argument( '-conf', '--conf', \
+    type=pathlib.Path, nargs='?', default=None, const=None,\
     help="configuration file (mandatory)")
   parser.add_argument( 'json_score_list',  type=pathlib.Path, nargs=1,\
     help="specifies the score list file (mandatory)" )
@@ -790,15 +844,53 @@ def lab_export_xls():
 
   args = parser.parse_args()
 
-
-  score_list = ScoreList.init_from_file( args.json_score_list[ 0 ], args.conf[ 0 ] )
+  if args.conf is None :
+    score_list =  ScoreList( args.json_score_list[ 0 ] )
+  else:
+    ## We need here to initialize the Scorelist and then run init_from_file
+    ## the function nneds to be added the 'self' argument.
+    score_list = ScoreList.init_from_file( args.json_score_list[ 0 ], args.conf[ 0 ] )
   score_list.finalize( )
 
   score_list.export_xls( args.xls_file[ 0 ], student_id_row=args.student_id_row,\
                            student_id_col=args.student_id_col,\
                            sheet_name=args.sheet_name[1:-1] )
 
+#def moodle_json_to_score_list( moodle_json_path, \
+#                              json_score_list_path='./json_score_list.json',
+#                              max_total_score=None ):
 
+def moodle_json_to_score_list( ):
+  """ put the scores returned by moodle to a score_lits format
+
+      we want to take advanatge of what has been developped with 
+      score_list. Especially with finalize and export_xls facilities. 
+      Exportation to xls is possible directly from moodle, but ther eare 
+      some decimal convesion that makes it hard to handle. 
+  """
+
+  description = """convert moodle_json scores to the score_list format"""
+  parser = argparse.ArgumentParser( description=description )
+  parser.add_argument( 'moodle_json_score_list',  type=pathlib.Path, nargs=1,\
+    help="specifies the moodle score list file (mandatory)" )
+  parser.add_argument( '-json_score_list', '--json_score_list', \
+    type=pathlib.Path, nargs='?', default='./score_list.json',\
+    const='./score_list.json', \
+    help="specifies the score list file (optional). By default ./json_score_list" )
+  parser.add_argument( '-max_total_score', '--max_total_score',  type=int, nargs='?',\
+    default=None, const=None, help="indicates the max_total_score (optional). By default it takes the  max 'observed score'" )
+
+  args = parser.parse_args()
+  print( args )
+  score_list = ScoreList( args.json_score_list )
+  score_list.init_from_moodle_json( args.moodle_json_score_list[ 0 ], \
+     max_total_score=args.max_total_score )
+   
+
+
+
+
+  
 #  score_list = ScoreList( json_score_list, specific_lab_class() )
 #  score_list.finalize( )
 #  score_list.xls( xls_file, student_id_col='A' ):

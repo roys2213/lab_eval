@@ -136,7 +136,7 @@ class EvalLab:
 #    time.sleep( 2 )
 
 
-  def compute_grade( self ):
+  def compute_grade( self, max_total_score=None ):
     """compute total score of the student (total and %) 
     """
     total_score = 0.0
@@ -156,12 +156,15 @@ class EvalLab:
 
     self.score[ "grade (total)" ] = total_score
 #    print( f"compute_grade: B: self.score: {self.score}" )
-    max_score = 0.0
-    for q_nbr in self.marking_scheme.keys():
-      if 'py' in self.marking_scheme[ q_nbr ].keys() :
-        max_score += self.marking_scheme[ q_nbr ][ 'py' ]
-      if 'pdf' in self.marking_scheme[ q_nbr ].keys() :
-        max_score += self.marking_scheme[ q_nbr ][ 'pdf' ]
+    if max_total_score is None :
+      max_score = 0.0
+      for q_nbr in self.marking_scheme.keys():
+        if 'py' in self.marking_scheme[ q_nbr ].keys() :
+          max_score += self.marking_scheme[ q_nbr ][ 'py' ]
+        if 'pdf' in self.marking_scheme[ q_nbr ].keys() :
+          max_score += self.marking_scheme[ q_nbr ][ 'pdf' ]
+    else:
+      max_score = max_total_score 
 
     if max_score != 0.0:
       self.score[ "grade (%)" ] = total_score / max_score * 100.0
