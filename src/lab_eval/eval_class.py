@@ -843,13 +843,13 @@ def lab_export_xls():
 #    const=4, help="column index where grades are written." )
 
   args = parser.parse_args()
-
+  print( f"args: {args}" )
   if args.conf is None :
     score_list =  ScoreList( args.json_score_list[ 0 ] )
   else:
     ## We need here to initialize the Scorelist and then run init_from_file
     ## the function nneds to be added the 'self' argument.
-    score_list = ScoreList.init_from_file( args.json_score_list[ 0 ], args.conf[ 0 ] )
+    score_list = ScoreList.init_from_file( args.json_score_list[ 0 ], args.conf )
   score_list.finalize( )
 
   score_list.export_xls( args.xls_file[ 0 ], student_id_row=args.student_id_row,\
