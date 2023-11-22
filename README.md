@@ -135,9 +135,9 @@ The resulting file is 'score_list.json'
 We eventually perform some operations. 
 
 ```
-lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_18 score_list.json  notes-INF808Gr18-A2023.xlsx
-lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_19 score_list.json  notes-INF808Gr19-A2023.xlsx
-lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_1 score_list.json  notes-IFT511Gr1-A2023.xlsx
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_inf808_18 score_list.json  notes-INF808Gr18-A2023.xlsx
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_inf808_19 score_list.json  notes-INF808Gr19-A2023.xlsx
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_ift511_1 score_list.json  notes-IFT511Gr1-A2023.xlsx
 ```
 
 
@@ -163,5 +163,10 @@ Here are some additional resources to push further the automation of Moodle labs
 https://github.com/troeger/moodleteacher
 https://github.com/hexatester/moodlepy/blob/master/moodle/mod/assign/assignment.py
 
+# TODO
 
+* refine the necessary operations: between moodle / genote and labeval.
+* max_score MUST always be provided when using finalize. In many cases, this value is taken from the Evalpy module. We may consider adding it as a metadata in score_list or in a conf file or as an argument to each command line. lab_finalize_grades lab_add_score_list. 
+* column description for genote excel files may be part of a conf file. 
+* initializations of scoreFile list needs to be revised   init_from_file needs a self. 
 

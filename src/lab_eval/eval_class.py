@@ -455,7 +455,7 @@ class ScoreList:
     min_grade = 0
     mean_grade = 0
     for lab_id in list( score_list.keys() ):
-      print( f"lab_id: {lab_id}" )
+      ## print( f"lab_id: {lab_id}" )
       ## score = score_list[ lab_id ] 
       #lab = self.eval_lab_class( join( self.lab_dir, dir_name), \
       ## In order to provide a percentage or a grade, we need
@@ -503,7 +503,8 @@ class ScoreList:
       ## by the lab_eval class.
       ## When grade (%) has not been computed, when max_total_score is 
       ## provided this value is used to determine teh percenatge otherwise 
-      ## we use max value of all scores. 
+      ## we use max value of all scores.
+      ## print( f"grade.keys() : {grade.keys()}" )
       if "grade (%)" not in list( grade.keys() ) :
         if max_total_score is not None:
           grade[ "grade (%)" ] = grade[ "grade (total)" ] / max_total_score * 100.0
@@ -843,6 +844,8 @@ def lab_export_xls():
     default=0, const=0, help="row index where student id starts" )
   parser.add_argument( '-sheet_name', '--sheet_name',  type=ascii, nargs='?', default="grades",\
     const="grades", help="name of the shee that contains the grades" )
+#  parser.add_argument( '-max_total_score', '--max_total_score',  type=int, nargs='?',\
+#    default=None, const=None, help="indicates the max_total_score (optional). By default it takes the  max 'observed score'" )
 #  parser.add_argument( '-grade_col', '--grade_col',  type=int, nargs='?', default=4,\
 #    const=4, help="column index where grades are written." )
 
@@ -854,7 +857,11 @@ def lab_export_xls():
     ## We need here to initialize the Scorelist and then run init_from_file
     ## the function nneds to be added the 'self' argument.
     score_list = ScoreList.init_from_file( args.json_score_list[ 0 ], args.conf )
-  score_list.finalize( )
+  ## we initially finalize to ensure the json_score_list remains coherent. 
+  ## we believe this shoudl be handled outside the exportation.
+  ## if so one needs to provide the necessary arguments to finalize.
+  ## score_list.finalize( )
+  ## self.finalize( max_total_score=max_total_score )
 
   score_list.export_xls( args.xls_file[ 0 ], student_id_row=args.student_id_row,\
                            student_id_col=args.student_id_col,\
