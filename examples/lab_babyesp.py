@@ -112,6 +112,11 @@ class EvalBabyESPLab( eval_lab.EvalLab ):
     alice_plaintext = b"yet another secret"
     ciphertext, icv = alice.encrypt_and_digest( alice_plaintext )
     ref_ciphertext, ref_icv = ref_alice.encrypt_and_digest( alice_plaintext )
+#    print( "\n ### Testing alice.encrypt_and_digest( plaintext ): \n" )
+#    print( f"  - ciphertext: {ciphertext}" )
+#    print( f"  - icv: {icv}" )
+#    print( f"  - ref_ciphertext: {ref_ciphertext}" )
+#    print( f"  - ref_icv: {ref_icv}" )
     return self.compare( ( ciphertext, icv ), ( ref_ciphertext, ref_icv ), 2 )
 
 

@@ -124,9 +124,10 @@ In this case, the intra is exclusively performed in moodle and we export the res
 * We have all students in one file, while we need to import the results per sub groups. 
 
 To convert the json file exported from moodle, we use the following command:
+`max_total_Score` is necessary
 
 ```
-lab_moodle_to_score_list INF808-AI-Intra-notes.json 
+lab_moodle_to_score_list --max_total_score 37 INF808-AI-Intra-notes.json
 ```
 
 The resulting file is 'score_list.json'
@@ -136,6 +137,7 @@ We eventually perform some operations.
 ```
 lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_18 score_list.json  notes-INF808Gr18-A2023.xlsx
 lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_19 score_list.json  notes-INF808Gr19-A2023.xlsx
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_1 score_list.json  notes-IFT511Gr1-A2023.xlsx
 ```
 
 

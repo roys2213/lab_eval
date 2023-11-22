@@ -501,10 +501,14 @@ class ScoreList:
       ## When grade (%) has already been computed, we do not re-compute it.
       ## The reason is that for labs, for example, it should be computed 
       ## by the lab_eval class.
-      ## When the eval_lab class is not able to compute the grade individually,
-      ## then we do it by considering all resulting scores. 
+      ## When grade (%) has not been computed, when max_total_score is 
+      ## provided this value is used to determine teh percenatge otherwise 
+      ## we use max value of all scores. 
       if "grade (%)" not in list( grade.keys() ) :
-        grade[ "grade (%)" ] = grade[ "grade (total)" ] / max_grade * 100.0
+        if max_total_score is not None:
+          grade[ "grade (%)" ] = grade[ "grade (total)" ] / max_total_score * 100.0
+        else:
+          grade[ "grade (%)" ] = grade[ "grade (total)" ] / max_grade * 100.0
 
       mean_grade_perc += grade[ "grade (%)" ]
       std += grade[ "grade (total)" ] ** 2
