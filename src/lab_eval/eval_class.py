@@ -610,12 +610,55 @@ class ScoreList:
     score_list = self.load_score_list( )
     student_list = []
     for student in student_db.db:
+      ## The student list considers students in db that have 
+      ## their lab evaluated.  
       ##if student[ 'username' ] in score_list.keys():
       if student[ 'nomdutilisateur' ] in score_list.keys():
         student_list.append( student )
-    if len( student_list ) != len( score_list.keys() ):
-      raise ValueError( f"non matching length student_list \
-              {student_list} and score_list_keys {score_list.keys()}" )
+    l_student = len( student_list )
+    l_lab = len( score_list.keys() )
+#    if len( student_list ) != len( score_list.keys() ):
+    if l_student != l_lab :
+      print( "ERROR: student_list and score_list.keys() mismatches\n" )
+      if l_student > l_lab:
+        print( """It is likely that the student database contains 
+          multiple times the same student ID""" )
+      if l_lab > l_student:
+        print( """It is likely that students are missing in the DB""" )
+      print("""\n
+          - score_list contains the evaluation of the students. It is a 
+        dictionnary where the key is the student ID and the the value 
+        contains the various grades of the questions. \n
+          - student_list is a list of students that have been evaluated. 
+        It is mostly a list of students that have been evaluated. \n 
+        In our case, we expect both list to hav ethe same length as one 
+        lab corresponds to one student. This is not what we have found.\n\n
+          - len( student_list ): {len( student_list )} 
+          - len( score_list.keys() ): {len( score_list.keys() )}""" )
+
+      student_id_list = [ student[ 'nomdutilisateur' ] for student in student_list ]
+      intersection = []
+      for s in list( score_list.keys() ):
+        if s in student_id_list:
+          student_id_list.remove( s )
+          del score_list[ s ] 
+          intersection.append( s )
+      print( f"""\n
+        - student IDs common to both score_list.keys() and 
+          student_list are: {intersection}.
+        - student_list : contains the additional students
+          associated with the following IDs: {student_id_list}.
+        - score_list.keys : contains the additional students
+          IDs: {score_list.keys()}""" )
+#      for k in score_list.keys():
+#        in_db = False  
+#        for student in student_db.db:
+#          if student[ 'nomdutilisateur' ] == k:
+#            inb_db = True
+#            break 
+#        if in_db is False:
+#          print( f"!!! student with id {k} doe snot seem to be in student.db" )
+      raise ValueError( f"non matching length student_list" ) 
     
     email_list = ""
     for student in student_list:
