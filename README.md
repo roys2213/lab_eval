@@ -106,6 +106,26 @@ Note the added file is the second argument so `pdf_score_list.json`` will be add
 ```
 lab_add_score_list --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg lab1/score_list.json pdf_score_list.json
 ```
+
+Note: We probably need to define a function that sets to None a list. This enables to initialize the pdf_score_list.json from score_list.json. 
+We can also check that 'grade (total)' and 'grade(%)' have been updated.  
+
+```
+import json 
+with open( 'pdf_score_list.json', 'rt', encoding='utf8' ) as f:
+  l = json.loads( f.read( ) )
+for k in l.keys() :
+  for q in l[ k ].keys():
+    try:
+      int( q )
+      l[ k ][ q ] = None
+    except:
+      continue
+with open( 'pdf_score_list.json', 'wt', encoding='utf8' ) as f:
+  f.write( json.dumps( l ),  indent=2 ) 
+```
+
+
 When original files have been saved, we can check `pdf_score_list.json` has not been modified while `lab1/score_list.json` has been modified. 
 
 We need then to generate the xls files that are considered as input to their system Genote. They provide an xls file to be complete. The column that contains the student id is located at row 17 column 0. The following function takes that column and generates the corresponding grades in a file `lab1_grades.xls`. We need then to manually copy/paste the grades to the main file before submitting. 
@@ -116,7 +136,7 @@ lab_export_xls --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg --student_id_row
 lab_export_xls --conf ~/gitlab/lab_eval/examples/lab_caesar.cfg --student_id_row 17 --student_id_col 0  --sheet_name lab1_19 lab1/score_list.json  notes-INF808Gr19-A2023.xlsx
 ```
 
-## Intra
+## Intra or Final (Entirely performed on Moodle and exported in json)
 
 In this case, the intra is exclusively performed in moodle and we export the results in a json format. That file does not match exactly the format we are using for 'score_list.json'. We could have used the xls format. However, we encoutered a few difficulties described as follows:
 
@@ -124,7 +144,9 @@ In this case, the intra is exclusively performed in moodle and we export the res
 * We have all students in one file, while we need to import the results per sub groups. 
 
 To convert the json file exported from moodle, we use the following command:
-`max_total_Score` is necessary
+`max_total_score` is necessary
+
+There are several possible json_files. In our case, the one we consider is the one with all question results. This means "point of each question" needs to be checked.
 
 ```
 lab_moodle_to_score_list --max_total_score 37 INF808-AI-Intra-notes.json
@@ -140,6 +162,63 @@ lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_inf808
 lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name intra_ift511_1 score_list.json  notes-IFT511Gr1-A2023.xlsx
 ```
 
+## Lab2 
+
+We update directly the json file. In this case, we provides the points to anyone that has given a 'decent' report as most of the information was needed to execute the code. 
+ 
+```
+import json
+with open( './score_list.json_script_report', 'rt', encoding='utf8' ) as f:
+  scores = json.loads( f.read() )
+  
+  
+for k in scores.keys():
+  if k != "student_id_with_no_report":
+    scores[ k ][ '2' ] = 1 
+    scores[ k ][ '5' ] += 1
+    scores[ k ][ '9' ] = 1 
+  else: 
+    scores[ k ][ '2' ] = 0
+    scores[ k ][ '9' ] = 0
+
+with open( './score_list.json_script_report', 'wt', encoding='utf8' ) as f:
+  f.write( json.dumps( scores, indent=2 ) )
+```
+
+To update the grades:
+```
+lab_finalize_grades --conf ~/gitlab/lab_eval/examples/lab_babyesp.cfg score_list.json_script_report 
+```
+
+To export to genote:
+
+```
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name lab2_inf808_18 score_list.json_script_report  notes-INF808Gr18-A2023.xlsx
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name lab2_inf808_19 score_list.json_script_report  notes-INF808Gr19-A2023.xlsx
+lab_export_xls --student_id_row 14 --student_id_col 0  --sheet_name lab2_ift511_1 score_list.json_script_report  notes-IFT511Gr1-A2023.xlsx
+```
+
+## Individual submissions
+
+When one studnet missed the dead line, we may want to add its contributions individualy. One way to do so is to rebuild the moodle.zip file. 
+
+If the evaluation has already run over moodle.zip, all files are unzipped under the lab1/cryptolab/moodle_dir directory. This means that we have:
+
+```
+lab1/cryptolab/moodle_dir/moodle_dir
+  +- student_dir_start
+  ...
+  +- late_student_dir
+  ...
+  +- student_dir_end
+``` 
+
+When the files of the late student are updated, we run
+
+```
+cd lab1/cryptolab/moodle_dir/moodle_dir
+zip -r "/home/mglt/uds/2024-fall-inf808/lundi/lab1/INF808-AL-Laboratoire Attaques cryptographiques Introduction aux attaques cryptographiques-3001267.zip"  .
+```
 
 # Configuration 
 

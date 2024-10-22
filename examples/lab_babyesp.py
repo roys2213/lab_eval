@@ -1,7 +1,10 @@
 from lab_eval import eval_lab
 
 class EvalBabyESPLab( eval_lab.EvalLab ):
-  def __init__( self, lab_dir, ref_dir, json_score_list=None, lab_id=None ):
+
+  def __init__( self, lab_dir=None, ref_dir=None, json_score_list=None, lab_id=None ):
+
+#  def __init__( self, lab_dir, ref_dir, json_score_list=None, lab_id=None ):
     # questiuon number { 'pdf' : points associated to the report, 
     #                    'py' : points associated to code } 
     self.marking_scheme = { 1 :  { 'py' : 2            }, 

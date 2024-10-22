@@ -354,6 +354,8 @@ class ScoreList:
             v = v.replace( ',', '.' )
           question_dict[ question_index ] = float( v )
           question_index += 1
+      ## the current format seems to have changed    
+      ## if len( question_dict.keys() ) == 0:    
       json_score_list[ moodle_student[ 'nomdutilisateur' ] ] = question_dict
 
     self.record_score_list( json_score_list  )

@@ -200,11 +200,27 @@ class EvalCaesarLab( eval_lab.EvalLab ):
 #    print( f"clear_text: {ref_clear_text}" )
     print( f"\nb) Testing clear_text" )
     q_score =  self.compare( clear_text, ref_clear_text, 4 )
+    
+#    print( f"--- clear_text [{len(clear_text)}]: {clear_text[ :100 ]}" ) 
+#    print( f"--- ref_clear_text [{len(ref_clear_text)}]: {ref_clear_text[ :100 ]}" ) 
     score += q_score
     if q_score != 4 :
+      clear_text_len = len( clear_text )
+      ref_clear_text_len = len( ref_clear_text )
+      if clear_text_len != ref_clear_text_len:
+        print( f"Checking the length of clear_text, "\
+               f"the output of the guess_clear_text function:"\
+               f"Unexpected length. Found {clear_text_len} characters, "\
+               f"Expecting {ref_clear_text_len} characters." )
+        print( "Note that the length is expressed as the number " +\
+                "of characters of the output of the guess_clear_text. " +\
+                "This means that binary representation of a " +\
+                "character counts for 5 characters." )
       max_error = 10
       error_counter = 0 
-      print( f"The following {max_error} are unexpected:" ) 
+      print( f"The following {max_error} are unexpected:" )
+      if len( clear_text ) == 0:
+        print( f" The cleartext output of guess_clear_text has no characters" )
       for i in range( len( clear_text ) ):
         if clear_text[ i ] != ref_clear_text[ i ] :
           error_counter += 1
