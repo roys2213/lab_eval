@@ -31,7 +31,7 @@ class EvalCaesarLab( eval_lab.EvalLab ):
                               2 :  { 'py' : 4              },
                               3 :  { 'py' : 2              },
                               4 :  {             'pdf' : 4 },
-                              5 :  { 'py' : 2.5, 'pdf' : 1 },
+                              5 :  { 'py' : 2.5, 'pdf' : 0.5 },
                               6 :  {             'pdf' : 3 },
                               7 :  {             'pdf' : 4 },
                               8 :  { 'py' : 4              },
